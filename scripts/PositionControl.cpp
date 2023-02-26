@@ -4,6 +4,7 @@
 #include "geometry_msgs/Wrench.h"
 #include "PID.hpp"
 #include "std_msgs/String.h"
+#include <Eigen/Dense>
 #include <iostream>
 #include <vector>
 #include <map>
@@ -46,8 +47,55 @@ class PositionControlNode{
 
 
     public:
+
+       // void cmd_pose_callback(geometry_msgs::Pose msg);
+       // void odom_callback(geometry_msgs::PoseStamped msg);
+
         PositionControlNode(){
-            std:: cout << "HELLO"; 
+            pos_des = {0,0,0};
+            quat_des = {0,0,0,-1};
+            initialized = false;
+            
+            ros::NodeHandle n;
+
+            control_rot = new PID(0.707, 0.1, 1.68, 0.05);
+            control_pos = new PID(0.707, 0.1, 1.68, 0.05);
+            
+            sub_cmd_pos = n.subscribe<geometry_msgs::Pose>("cmd_pose", 100, &PositionControlNode::cmd_pose_callback, this);
+           sub_odometry = n.subscribe<geometry_msgs::PoseStamped>("odom", 100, &PositionControlNode::odom_callback, this);
+            pub_cmd_thrust = n.advertise<geometry_msgs::Wrench>("thruster_manager/input", 10);
+        }
+
+
+        void cmd_pose_callback(const geometry_msgs::Pose::ConstPtr& msg){
+            auto pos = msg->position;
+            auto quat = msg->orientation;
+            pos_des = {pos.x, pos.y, pos.z};
+            quat_des = {quat.x, quat.y, quat.z, quat.w};
+        }
+
+        void odom_callback(const geometry_msgs::PoseStamped::ConstPtr& msg){
+            auto p = msg->pose.position;
+            auto quat = msg->pose.orientation;
+            
+            std::vector<double> p_cur = {p.x, p.y, p.z};
+            std::vector<double> quat_cur = {quat.x, quat.y, quat.z, quat.w};
+
+            if(!initialized){
+                pos_des = p_cur;
+                quat_des = quat_cur;
+                initialized = true;
+            }
+
+            std::vector<double> e_pos_world = {
+                pos_des[0]-p_cur[0],
+                pos_des[1]-p_cur[1],
+                pos_des[2]-p_cur[2],
+                pos_des[3]-p_cur[3]
+            };
+
+            //calculating the error
+
         }
 };
 
