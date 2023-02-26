@@ -61,8 +61,8 @@ class PositionControlNode{
             control_rot = new PID(0.707, 0.1, 1.68, 0.05);
             control_pos = new PID(0.707, 0.1, 1.68, 0.05);
             
-            sub_cmd_pos = n.subscribe<geometry_msgs::Pose>("cmd_pose", 100, &PositionControlNode::cmd_pose_callback, this);
-           sub_odometry = n.subscribe<geometry_msgs::PoseStamped>("odom", 100, &PositionControlNode::odom_callback, this);
+            sub_cmd_pos = n.subscribe<geometry_msgs::Pose>("cmd_pose", 10, &PositionControlNode::cmd_pose_callback, this);
+           sub_odometry = n.subscribe<geometry_msgs::PoseStamped>("odom", 10, &PositionControlNode::odom_callback, this);
             pub_cmd_thrust = n.advertise<geometry_msgs::Wrench>("thruster_manager/input", 10);
         }
 
@@ -87,15 +87,25 @@ class PositionControlNode{
                 initialized = true;
             }
 
+            //error calculation
+
             std::vector<double> e_pos_world = {
                 pos_des[0]-p_cur[0],
                 pos_des[1]-p_cur[1],
-                pos_des[2]-p_cur[2],
-                pos_des[3]-p_cur[3]
+                pos_des[2]-p_cur[2]
             };
 
-            //calculating the error
+            Eigen::Quaternion q(quat_cur[3],quat_cur[0], quat_cur[1], quat_cur[2]);
+            q.normalize();
+            Eigen::Matrix4d quat_mat = Eigen::Matrix4d::Identity();
+            mat.topLeftCorner<3,3>() = q.toRotationMatrix();
 
+            Eigen::Vector3d e_pos_world_vec;
+            e_pos_world_vec << e_pos_world[0], e_pos_world[1], e_pos_world[2];
+            Eigen::Vector3d e_pos_body_vec = quat_mat.transpose().block<3,3>(0,0) * e_pos_world_vec;
+            vector<double> e_pos_body = {e_pos_body_vec[0], e_pos_body_vec[1], e_pos_body[2]};
+
+            Eigen::Vector4d e_rot_quat
         }
 };
 
