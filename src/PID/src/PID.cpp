@@ -18,11 +18,11 @@ double PID::calcAlphaEMA(double fn){
     return c - 1 + std::sqrt(c * c - 4 * c + 3);
 }
 
-double PID::update(double ref, double pos, double t){
-    double error = pos - ref;
+double PID::update(double error, double t){
     double dt = t - t_prev;
     double ef = alpha*error + (1 - alpha)*old_ef;
     double derivative = (ef - old_ef)/dt;
+    //double derivative = 0; this is just for testing with random messages
     double new_integral = integral + error*dt;
 
     double updated = kp*error + ki*integral + kd*derivative;

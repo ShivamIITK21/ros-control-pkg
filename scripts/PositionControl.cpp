@@ -5,32 +5,13 @@
 #include "PID.hpp"
 #include "std_msgs/String.h"
 #include <Eigen/Dense>
+#include <yaml-cpp/yaml.h>
 #include <iostream>
+#include <filesystem>
 #include <vector>
 #include <map>
 #include <string>
 
-class TestNode{
-    public:
-        TestNode(){
-            ros::NodeHandle n;
-            ros::Publisher chatter_pub = n.advertise<std_msgs::String>("chatter",    1000);
-            ros::Rate loop_rate(10);
-
-            int count = 0;
-            while(ros::ok()){
-                std_msgs::String msg;
-                std::stringstream ss;
-                ss << "Hello World" << count;
-                msg.data = ss.str();
-                ROS_INFO("%s", msg.data.c_str());
-                chatter_pub.publish(msg);
-                ros::spinOnce();
-                loop_rate.sleep();
-                ++count;
-            }
-        }
-};
 
 class PositionControlNode{
     
@@ -52,18 +33,29 @@ class PositionControlNode{
        // void odom_callback(geometry_msgs::PoseStamped msg);
 
         PositionControlNode(){
+			
             pos_des = {0,0,0};
             quat_des = {0,0,0,-1};
             initialized = false;
             
             ros::NodeHandle n;
-
-            control_rot = new PID(0.707, 0.1, 1.68, 0.05);
-            control_pos = new PID(0.707, 0.1, 1.68, 0.05);
             
+            setConfig();
             sub_cmd_pos = n.subscribe<geometry_msgs::Pose>("cmd_pose", 10, &PositionControlNode::cmd_pose_callback, this);
-           sub_odometry = n.subscribe<geometry_msgs::PoseStamped>("odom", 10, &PositionControlNode::odom_callback, this);
+			sub_odometry = n.subscribe<geometry_msgs::PoseStamped>("odom", 10, &PositionControlNode::odom_callback, this);
             pub_cmd_thrust = n.advertise<geometry_msgs::Wrench>("thruster_manager/input", 10);
+        }
+
+        void setConfig(){
+			std::filesystem::path dir = std::filesystem::path(__FILE__).parent_path();
+			std::filesystem::path file = dir / "../config/PID_params.yaml";
+			
+            YAML::Node config = YAML::LoadFile(file);
+
+            control_pos = new PID(config["pos_p"].as<double>(), config["pos_i"].as<double>(), config["pos_d"].as<double>(), config["pos_alpha"].as<double>());
+            control_rot = new PID(config["rot_p"].as<double>(), config["rot_i"].as<double>(), config["rot_d"].as<double>(), config["rot_alpha"].as<double>());
+
+            std::cout << "Config for PID set\n" << std::endl;
         }
 
 
@@ -95,26 +87,57 @@ class PositionControlNode{
                 pos_des[2]-p_cur[2]
             };
 
-            Eigen::Quaternion q(quat_cur[3],quat_cur[0], quat_cur[1], quat_cur[2]);
+            Eigen::Quaterniond q(quat_cur[3],quat_cur[0], quat_cur[1], quat_cur[2]);
             q.normalize();
             Eigen::Matrix4d quat_mat = Eigen::Matrix4d::Identity();
-            mat.topLeftCorner<3,3>() = q.toRotationMatrix();
+            quat_mat.topLeftCorner<3,3>() = q.toRotationMatrix();
 
             Eigen::Vector3d e_pos_world_vec;
             e_pos_world_vec << e_pos_world[0], e_pos_world[1], e_pos_world[2];
             Eigen::Vector3d e_pos_body_vec = quat_mat.transpose().block<3,3>(0,0) * e_pos_world_vec;
-            vector<double> e_pos_body = {e_pos_body_vec[0], e_pos_body_vec[1], e_pos_body[2]};
+            //std::cout << e_pos_body_vec << std::endl;
+            std::vector<double> e_pos_body = {e_pos_body_vec[0], e_pos_body_vec[1], e_pos_body_vec[2]};
 
-            Eigen::Vector4d e_rot_quat
+            Eigen::Quaterniond e_rot_quat = q.conjugate() * Eigen::Quaterniond(quat_des[3], quat_des[0], quat_des[1], quat_des[2]);
+            e_rot_quat.normalize();
+            Eigen::Vector3d euler_angles = e_rot_quat.toRotationMatrix().eulerAngles(2,1,0); //along the ZYX axis;
+            std::vector<double> e_rot = {euler_angles[2], euler_angles[1], euler_angles[0]};
+            //std::cout << euler_angles << std::endl;
+
+            double t = msg->header.stamp.toSec();
+
+            geometry_msgs::Wrench cmd_thrust;
+            for(int i = 0; i < 3; i++){
+				std::cout << e_pos_body[i] << std::endl;
+               double pos_out = control_pos->update(e_pos_body[i], t);
+               double rot_out = control_rot->update(e_rot[i], t);
+
+                if(i == 0){
+                    cmd_thrust.force.x = pos_out;
+                    cmd_thrust.torque.x = rot_out;
+                }
+                else if(i == 1){
+                    cmd_thrust.force.y = pos_out;
+                    cmd_thrust.torque.y = rot_out;
+                }
+                else if(i == 2){
+                    cmd_thrust.force.z = pos_out;
+                    cmd_thrust.torque.z = rot_out;
+                }
+            }
+
+            pub_cmd_thrust.publish(cmd_thrust);
+
         }
 };
 
 int main(int argc, char ** argv){
-    std::cout << "Starting Test Node\n";
-    ros::init(argc, argv, "test_node");
+    std::cout << "Starting: Position Control Node\n";
+    ros::init(argc, argv, "position_control_node");
 
     try{
-        TestNode();
+        PositionControlNode node;
+        ros::spin();
     }catch(...){
         std::cout << "Exception!\n";
     }

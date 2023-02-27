@@ -15,7 +15,7 @@ class PID{
     public:
         PID(double _kp, double _ki, double _kd, double _fc);
         static double calcAlphaEMA(double fn);
-        double update(double ref, double pos, double t);
+        double update(double err, double t);
 };
 
 #endif

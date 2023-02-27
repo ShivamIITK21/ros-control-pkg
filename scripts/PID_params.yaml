@@ -1,0 +1,9 @@
+pos_p: 0.707
+pos_i: 0.1
+pos_d: 1.68
+pos_alpha: 0.05
+
+rot_p: 0.707
+rot_i: 0.1
+rot_d: 0.05
+rot_alpha: 0.05
