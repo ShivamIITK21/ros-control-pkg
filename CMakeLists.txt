@@ -14,8 +14,14 @@ find_package(catkin REQUIRED COMPONENTS
   geometry_msgs
 )
 
+#set(CMAKE_CXX_COMPILER_VERSION 17)
+set (CMAKE_CXX_FLAGS "-lstdc++fs -std=c++17")
+
 find_package(Eigen3 REQUIRED)
 find_package(yaml-cpp REQUIRED)
+set(FUZZYLITE_DIR "/home/shivam/fuzzylite/fuzzylite")
+
+#include_directories($(fuzzylite_INCLUDE_DIRS))
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)

@@ -1,4 +1,4 @@
-#include "fuzzyPID.hpp"
+#include "FuzzyPID.hpp"
 using namespace fl;
 
 void FuzzyPID::setMembershipFuncsInp(InputVariable * var, double start, double end){

@@ -1,0 +1,17 @@
+pos_p: 0.0707
+pos_i: 0.1
+pos_d: 1.68
+pos_deledot: [-0.7, 0.7]
+pos_dele: [-1, 1]
+pos_delkp: [-0.3, 0.3]
+pos_delki: [-0.06, 0.06]
+pos_delkd: [-1.5, 1.5]
+
+rot_p: 0.0707
+rot_i: 0.1
+rot_d: 1.68
+rot_deledot: [-0.7, 0.7]
+rot_dele: [-1, 1]
+rot_delkp: [-0.3, 0.3]
+rot_delki: [-0.06, 0.06]
+rot_delkd: [-1.5, 1.5]

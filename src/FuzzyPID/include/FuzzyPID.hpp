@@ -1,7 +1,6 @@
 #ifndef FUZZYPID_H
 #define FUZZYPID_H
 
-#include "controllers.hpp"
 #include "fl/Headers.h"
 #include<utility>
 using namespace fl;
@@ -14,7 +13,7 @@ typedef struct gainRange{
 }gainRange;
 
 
-class FuzzyPID: public Controller{
+class FuzzyPID{
     public:
         double kp, ki, kd;
         double integral;
